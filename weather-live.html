@@ -243,7 +243,11 @@ async function loadWeather(){
     const t = new Date();
     st.textContent = `내 위치 기준 · 바람 ${w.toFixed(1)}m/s · ${t.getHours()}:${String(t.getMinutes()).padStart(2, "0")} 업데이트`;
   } catch(e) {
-    st.textContent = "자동으로 불러오지 못했어요. 위치 권한을 확인하거나 아래에 직접 입력해 주세요.";
+    /* 실패 원인을 구분해서 보여줌: e.code는 위치 오류(1=권한 거부, 2=위치 불명, 3=시간 초과) */
+    st.textContent = e && e.code === 1 ? "위치 권한이 꺼져 있어요. 아이폰 설정에서 Safari 위치 접근을 허용해 주세요."
+      : e && (e.code === 2 || e.code === 3) ? "현재 위치를 확인하지 못했어요. 잠시 뒤 다시 눌러 주세요."
+      : !(navigator.geolocation) ? "이 브라우저는 위치 기능을 지원하지 않아요."
+      : "날씨 서버에서 불러오지 못했어요 (" + ((e && e.message) || "오류") + "). 아래에 직접 입력해 주세요.";
   }
 }
 $("loc").addEventListener("click", loadWeather);
