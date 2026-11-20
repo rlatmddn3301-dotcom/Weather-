@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>오늘 뭐 입지?</title>
+<style>
+  :root{--bg:#f6f7f9;--card:#fff;--text:#1c1f24;--sub:#6b7280;--line:#e5e7eb;--accent:#2563eb;--accent-text:#fff;--mine:#dbeafe;
+    box-sizing:border-box;padding-top:env(safe-area-inset-top,0px)}
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#111317;--card:#1b1e24;--text:#eceef2;--sub:#9aa1ad;--line:#2b2f37;--accent:#60a5fa;--accent-text:#0b1220;--mine:#1e3a5f}}
+  :root[data-theme="dark"]{--bg:#111317;--card:#1b1e24;--text:#eceef2;--sub:#9aa1ad;--line:#2b2f37;--accent:#60a5fa;--accent-text:#0b1220;--mine:#1e3a5f}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif}
+  main{max-width:440px;margin:0 auto;padding:20px 16px 110px}
+  h1{font-size:20px;margin:0 0 14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px}
+  label{font-size:13px;color:var(--sub);display:block;margin:0 0 8px}
+  .row{display:flex;gap:8px}
+  .row>div{flex:1}
+  input[type=number],input[type=text]{width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:transparent;color:var(--text);font-size:16px}
+  button.chip{flex:1;padding:10px 6px;border-radius:10px;border:1px solid var(--line);background:transparent;color:var(--text);font-size:14px;cursor:pointer}
+  button.chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
+  .gap{margin-top:14px}
+  .hero{text-align:center}
+  .hero .e{font-size:52px}
+  .hero .big{font-size:44px;font-weight:700}
+  .hero .t{font-size:20px;font-weight:700;margin:4px 0}
+  .hero .s{font-size:13px;color:var(--sub)}
+  .item{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--line);font-size:15px}
+  .item:first-of-type{border-top:none}
+  .item b{color:var(--sub);font-weight:500;white-space:nowrap}
+  .item span{text-align:right}
+  .note{font-size:14px;line-height:1.5;margin:6px 0 0}
+  /* 커뮤니티 말풍선 */
+  .post{padding:10px 12px;border-radius:12px;background:var(--bg);margin-bottom:8px;max-width:88%}
+  .post.mine{background:var(--mine);margin-left:auto}
+  .post small{display:block;color:var(--sub);font-size:11px;margin-bottom:2px}
+  .post p{margin:0;font-size:15px;line-height:1.4;word-break:break-word}
+  .empty{color:var(--sub);font-size:14px;text-align:center;padding:12px}
+  .send{display:flex;gap:8px;margin-top:8px}
+  .send button{padding:0 16px;border-radius:10px;border:none;background:var(--accent);color:var(--accent-text);font-size:15px;cursor:pointer}
+  .send button:disabled,.send input:disabled{opacity:.5}
+  /* 하단 탭바 */
+  nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--card);border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px))}
+  nav a{flex:1;text-align:center;text-decoration:none;color:var(--sub);font-size:12px;padding:6px 0}
+  nav a span{display:block;font-size:22px}
+  nav a.on{color:var(--accent);font-weight:700}
+</style>
+</head>
+<body>
+<main>
+  <!-- 1페이지: 오늘 날씨 -->
+  <section id="p-weather">
+    <h1>☁️ 오늘 날씨</h1>
+    <div class="card"><button class="chip" id="loc" style="width:100%">📍 내 위치로 새로고침</button><label id="wstat" class="gap" style="margin-bottom:0"></label></div>
+    <div class="card hero" id="hero"></div>
+    <div class="card">
+      <div class="row">
+        <div><label for="cur">현재 기온</label><input id="cur" type="number"></div>
+        <div><label for="hi">최고</label><input id="hi" type="number"></div>
+        <div><label for="lo">최저</label><input id="lo" type="number"></div>
+      </div>
+      <label class="gap">하늘 상태</label>
+      <div class="row" id="sky">
+        <button class="chip" data-v="sun">☀️ 맑음</button><button class="chip" data-v="cloud">☁️ 흐림</button>
+        <button class="chip" data-v="rain">🌧 비</button><button class="chip" data-v="snow">❄️ 눈</button>
+      </div>
+      <label class="gap">바람</label>
+      <div class="row" id="wind">
+        <button class="chip" data-v="low">약함</button><button class="chip" data-v="mid">보통</button><button class="chip" data-v="high">강함</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2페이지: 복장 추천 -->
+  <section id="p-outfit" hidden>
+    <h1>🧥 복장 추천</h1>
+    <div class="card"><label>나는 추위를…</label>
+      <div class="row" id="sens">
+        <button class="chip" data-v="-3">많이 타요</button><button class="chip" data-v="0">보통이에요</button><button class="chip" data-v="3">덜 타요</button>
+      </div>
+    </div>
+    <div class="card hero" id="ohero"></div>
+    <div class="card" id="olist"></div>
+  </section>
+
+  <!-- 3페이지: 커뮤니티 -->
+  <section id="p-talk" hidden>
+    <h1>💬 오늘 날씨 이야기</h1>
+    <div class="card">
+      <label id="tinfo"></label>
+      <div id="posts"><div class="empty">불러오는 중…</div></div>
+      <div class="send">
+        <input id="msg" type="text" maxlength="200" placeholder="오늘 날씨 어때요?" disabled>
+        <button id="go" disabled>보내기</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<nav>
+  <a href="#weather" data-t="weather"><span>🌤</span>날씨</a>
+  <a href="#outfit" data-t="outfit"><span>🧥</span>복장</a>
+  <a href="#talk" data-t="talk"><span>💬</span>대화</a>
+</nav>
+
+<script>
+const $ = id => document.getElementById(id);
+const SKY = {sun:["☀️","맑음"], cloud:["☁️","흐림"], rain:["🌧","비"], snow:["❄️","눈"]};
+
+/* 체감온도 구간표: 체감 기온이 min 이상이면 해당 구간 */
+const BANDS = [
+  {min:28, e:"🥵", title:"한여름 더위", top:"민소매·반팔", bottom:"반바지·린넨 바지", outer:"필요 없음", tip:"통풍 잘 되는 얇은 소재가 최고예요."},
+  {min:23, e:"😎", title:"더운 날", top:"반팔·얇은 셔츠", bottom:"반바지·면바지", outer:"필요 없음", tip:"냉방이 세면 얇은 겉옷 하나만 챙기세요."},
+  {min:20, e:"🙂", title:"선선한 날", top:"긴팔티·얇은 셔츠", bottom:"면바지·청바지", outer:"얇은 가디건", tip:"아침저녁엔 살짝 쌀쌀해요."},
+  {min:17, e:"🍃", title:"쌀쌀한 날", top:"맨투맨·얇은 니트", bottom:"청바지·슬랙스", outer:"가디건·얇은 자켓", tip:"겉옷 없이 나가면 추워요."},
+  {min:12, e:"🧥", title:"서늘한 날", top:"니트·맨투맨", bottom:"청바지·두께감 있는 바지", outer:"자켓·야상", tip:"자켓은 꼭 필요해요."},
+  {min:9,  e:"🍂", title:"꽤 추운 날", top:"니트 (+ 히트텍)", bottom:"두꺼운 바지", outer:"트렌치코트·두꺼운 자켓", tip:"얇게 여러 겹이 따뜻해요."},
+  {min:5,  e:"🥶", title:"추운 날", top:"히트텍 + 니트", bottom:"기모 바지", outer:"코트·가죽자켓", tip:"목도리가 있으면 훨씬 나아요."},
+  {min:0,  e:"🧣", title:"매우 추운 날", top:"히트텍 + 두꺼운 니트", bottom:"기모 바지", outer:"패딩·두꺼운 코트", tip:"목도리와 장갑도 챙기세요."},
+  {min:-999, e:"❄️", title:"한파", top:"기모 상의 + 히트텍", bottom:"기모 바지 + 내복", outer:"롱패딩", tip:"장갑·핫팩·방한 모자까지 챙기세요."}
+];
+
+/* 세 페이지가 함께 쓰는 상태 (기기에 저장, 막혀 있으면 기본값) */
+const S = {cur:12, hi:16, lo:7, sky:"cloud", wind:"mid", sens:0};
+try { Object.assign(S, JSON.parse(localStorage.getItem("w3") || "{}")); } catch(e) {}
+const save = () => { try { localStorage.setItem("w3", JSON.stringify(S)); } catch(e) {} };
+
+function summary(){ return `${S.cur}°C · ${SKY[S.sky][1]}`; }
+
+function renderAll(){
+  /* 1페이지 */
+  $("hero").innerHTML = `<div class="e">${SKY[S.sky][0]}</div><div class="big">${S.cur}°</div>` +
+    `<div class="t">${SKY[S.sky][1]}</div><div class="s">최고 ${S.hi}° · 최저 ${S.lo}° · 일교차 ${S.hi - S.lo}°</div>`;
+  document.querySelectorAll("#sky .chip").forEach(c => c.setAttribute("aria-pressed", c.dataset.v === S.sky));
+  document.querySelectorAll("#wind .chip").forEach(c => c.setAttribute("aria-pressed", c.dataset.v === S.wind));
+  document.querySelectorAll("#sens .chip").forEach(c => c.setAttribute("aria-pressed", Number(c.dataset.v) === S.sens));
+
+  /* 2페이지: 체감 = 기온 + 체질 보정 - 바람 보정 */
+  const feel = S.cur + S.sens - (S.wind === "high" ? 3 : 0);
+  const b = BANDS.find(x => feel >= x.min);
+  $("ohero").innerHTML = `<div class="e">${b.e}</div><div class="t">${b.title}</div>` +
+    `<div class="s">체감 기준 ${feel}°C · 최소한 이렇게는 입어야 안 추워요</div>`;
+  const extra = [];
+  if (S.sky === "rain" || S.sky === "snow") extra.push("우산과 물에 강한 신발을 챙기세요.");
+  if (S.wind === "high") extra.push("바람막이 소재 겉옷이 좋아요.");
+  if (S.hi - S.lo >= 10) extra.push("일교차가 커서 벗기 쉬운 겉옷이 좋아요.");
+  $("olist").innerHTML = `<div class="item"><b>상의</b><span>${b.top}</span></div>` +
+    `<div class="item"><b>하의</b><span>${b.bottom}</span></div><div class="item"><b>겉옷</b><span>${b.outer}</span></div>` +
+    `<p class="note">💡 ${b.tip}</p>` + extra.map(t => `<p class="note">➕ ${t}</p>`).join("");
+
+  $("tinfo").textContent = `오늘의 날씨: ${summary()}`;
+}
+
+/* 입력 연결 */
+[["cur","cur"],["hi","hi"],["lo","lo"]].forEach(([id,k]) => {
+  $(id).value = S[k];
+  $(id).addEventListener("input", e => { S[k] = Number(e.target.value) || 0; save(); renderAll(); });
+});
+[["sky","sky"],["wind","wind"],["sens","sens"]].forEach(([id,k]) => {
+  document.querySelectorAll(`#${id} .chip`).forEach(c => c.addEventListener("click", () => {
+    S[k] = k === "sens" ? Number(c.dataset.v) : c.dataset.v; save(); renderAll();
+  }));
+});
+
+/* 해시로 페이지 전환 */
+function route(){
+  const t = ["weather","outfit","talk"].includes(location.hash.slice(1)) ? location.hash.slice(1) : "weather";
+  ["weather","outfit","talk"].forEach(n => { $("p-"+n).hidden = n !== t; });
+  document.querySelectorAll("nav a").forEach(a => a.classList.toggle("on", a.dataset.t === t));
+}
+addEventListener("hashchange", route);
+
+/* 3페이지: 공유 대화 (db). 연결되지 않으면 안내만 보여주고 나머지는 그대로 동작 */
+let db = null, user = null, uid = null, posts = [];
+const dayKey = () => { const d = new Date(); return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`; };
+
+async function renderPosts(){
+  const box = $("posts");
+  if (!posts.length) { box.innerHTML = '<div class="empty">아직 이야기가 없어요. 첫 글을 남겨보세요.</div>'; return; }
+  let names = {};
+  try { names = await user.profiles([...new Set(posts.map(p => p.uid))]); } catch(e) {}
+  box.textContent = "";
+  posts.forEach(p => {
+    const el = document.createElement("div"); el.className = "post" + (p.uid === uid ? " mine" : "");
+    const s = document.createElement("small");
+    const t = new Date(p.ts);
+    s.textContent = `${(names[p.uid] && names[p.uid].name) || "익명"} · ${t.getHours()}:${String(t.getMinutes()).padStart(2,"0")}`;
+    const m = document.createElement("p"); m.textContent = p.text;   /* 남이 쓴 글은 textContent로만 표시 */
+    el.append(s, m); box.append(el);
+  });
+}
+
+async function send(){
+  const text = $("msg").value.trim();
+  if (!text || !db) return;
+  $("go").disabled = true;
+  try { await db.collection("posts").add({text, uid, ts: Date.now(), day: dayKey()}); $("msg").value = ""; }
+  catch(e) { $("posts").insertAdjacentHTML("beforeend", '<div class="empty">보내지 못했어요. 잠시 뒤 다시 시도해 주세요.</div>'); }
+  $("go").disabled = false;
+}
+
+async function initTalk(){
+  const timer = setTimeout(() => { if (!db) $("posts").innerHTML = '<div class="empty">대화는 로그인한 상태에서만 열려요.</div>'; }, 10000);
+  try {
+    if (!(window.claude && claude.use)) return;
+    db = await claude.use("db"); user = await claude.use("user");
+    if (!db || !user) { db = null; return; }
+    clearTimeout(timer);
+    uid = await user.id();
+    $("msg").disabled = false; $("go").disabled = false;
+    /* 오늘 날짜 글만 구독 (한 번만) */
+    db.collection("posts").where("day", "==", dayKey()).limit(100).onSnapshot(snap => {
+      posts = snap.docs.map(d => d.data()).sort((a, b) => a.ts - b.ts); renderPosts();
+    }, () => { $("posts").innerHTML = '<div class="empty">대화를 불러오지 못했어요.</div>'; });
+  } catch(e) {}
+}
+$("go").addEventListener("click", send);
+$("msg").addEventListener("keydown", e => { if (e.key === "Enter") send(); });
+
+/* 실시간 날씨: 브라우저 위치 -> Open-Meteo */
+/* 날씨 코드(WMO)를 앱의 4가지 하늘 상태로 변환 */
+const codeToSky = c => (c >= 71 && c <= 77) || c === 85 || c === 86 ? "snow"
+  : (c >= 51 && c <= 67) || (c >= 80 && c <= 82) || c >= 95 ? "rain" : c <= 1 ? "sun" : "cloud";
+
+async function loadWeather(){
+  const st = $("wstat"); st.textContent = "위치 확인 중…";
+  try {
+    const pos = await new Promise((ok, no) => navigator.geolocation.getCurrentPosition(ok, no, {timeout: 10000, maximumAge: 600000}));
+    st.textContent = "날씨 불러오는 중…";
+    const {latitude: la, longitude: lo} = pos.coords;
+    const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${la}&longitude=${lo}&current=temperature_2m,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min&timezone=auto&wind_speed_unit=ms&forecast_days=1`);
+    if (!r.ok) throw new Error("fetch");
+    const d = await r.json();
+    S.cur = Math.round(d.current.temperature_2m);
+    S.hi = Math.round(d.daily.temperature_2m_max[0]);
+    S.lo = Math.round(d.daily.temperature_2m_min[0]);
+    S.sky = codeToSky(d.current.weather_code);
+    const w = d.current.wind_speed_10m;            /* m/s: 4 미만 약함, 9 이상 강함 */
+    S.wind = w >= 9 ? "high" : w >= 4 ? "mid" : "low";
+    ["cur", "hi", "lo"].forEach(k => $(k).value = S[k]);
+    save(); renderAll();
+    const t = new Date();
+    st.textContent = `내 위치 기준 · 바람 ${w.toFixed(1)}m/s · ${t.getHours()}:${String(t.getMinutes()).padStart(2, "0")} 업데이트`;
+  } catch(e) {
+    st.textContent = "자동으로 불러오지 못했어요. 위치 권한을 확인하거나 아래에 직접 입력해 주세요.";
+  }
+}
+$("loc").addEventListener("click", loadWeather);
+
+renderAll(); route(); initTalk(); loadWeather();
+</script>
+</body>
+</html>
